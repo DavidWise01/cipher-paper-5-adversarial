@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper V — Adversarial Audio · a message only a machine hears</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600&family=Spectral:ital,wght@0,300;0,400;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--sea:#170d20;--line:rgba(154,152,166,.16);--lead:#9a98a6;--lead-dim:#5b5868;
+    --parch:#e9e2d2;--parch-dim:#b9b2a3;--gold:#d9a441;--gold-dim:#a87f33;--verd:#73b3a3;--murex:#b24a78;--adv:#b070c8;}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--sea);color:var(--parch);font-family:"Spectral",Georgia,serif;line-height:1.58;
+    -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(1100px 560px at 82% -12%,rgba(176,112,200,.13),transparent 60%),
+      radial-gradient(820px 640px at 3% 112%,rgba(115,179,163,.07),transparent 55%);
+    display:flex;justify-content:center}
+  .card{max-width:660px;width:100%;padding:34px 24px 54px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-dim)}
+  h1{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:clamp(40px,11vw,66px);margin:6px 0 0;line-height:.94;letter-spacing:-.5px}
+  h1 .gk{display:block;font-size:.32em;color:var(--lead);letter-spacing:.04em;margin-top:8px;font-style:italic}
+  .sub{font-style:italic;font-weight:300;color:var(--parch-dim);font-size:16px;margin:16px 0 0;max-width:58ch}
+  .sub b{color:var(--adv);font-style:normal;font-weight:400}
+  h2{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-dim);
+    margin:32px 0 13px;font-weight:500;border-top:1px solid var(--line);padding-top:18px}
+  p.body{font-size:15.5px;color:var(--parch-dim);max-width:62ch}
+  p.body b{color:var(--parch)}
+  .adv{color:var(--adv)} .verd{color:var(--verd)} .mux{color:var(--murex)}
+
+  figure{margin:22px 0 0}
+  svg{display:block;width:100%;height:auto}
+  .frame{background:rgba(0,0,0,.16);border:1px solid var(--line);border-radius:8px}
+  figcaption{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--lead-dim);margin-top:9px;line-height:1.7}
+  figcaption b{color:var(--gold-dim)}
+
+  .demo{background:rgba(0,0,0,.20);border:1px solid var(--line);border-radius:8px;padding:16px}
+  .demo h4{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--adv);margin:0 0 10px}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .preset{cursor:pointer;background:rgba(0,0,0,.18);border:1px solid var(--line);border-radius:5px;
+    color:var(--lead);font-family:"IBM Plex Mono",monospace;font-size:11px;padding:7px 10px;letter-spacing:.03em;transition:.12s}
+  .preset:hover{border-color:rgba(176,112,200,.4);color:var(--parch)}
+  .preset.active{border-color:rgba(176,112,200,.6);color:var(--adv);background:rgba(176,112,200,.06)}
+  .bits{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
+  .bit{width:40px;height:46px;border:1px solid var(--lead-dim);border-radius:7px;
+    background:linear-gradient(180deg,#1a1228,#130d1e);cursor:pointer;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;transition:.1s}
+  .bit b{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:500;color:var(--lead)}
+  .bit small{font-family:"IBM Plex Mono",monospace;font-size:7.5px;color:var(--lead-dim);margin-top:1px}
+  .bit.one{border-color:rgba(176,112,200,.6)} .bit.one b{color:var(--adv)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+  button{cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.18));border:1px solid var(--line);
+    border-radius:5px;color:var(--parch);font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.03em;padding:10px 14px;transition:.15s}
+  button:hover{border-color:rgba(176,112,200,.5);background:rgba(176,112,200,.08)}
+  button:active{transform:translateY(1px)}
+  button.primary{border-color:rgba(176,112,200,.55);color:var(--adv)}
+  .verdict{font-family:"IBM Plex Mono",monospace;font-size:12px;margin-top:11px;letter-spacing:.03em;color:var(--lead-dim);line-height:1.65}
+  .verdict b{color:var(--adv)} .verdict .ok{color:var(--verd)} .verdict .x{color:var(--murex)}
+
+  .methods{display:grid;grid-template-columns:1fr;gap:9px;margin-top:4px}
+  .m{background:rgba(0,0,0,.18);border:1px solid var(--line);border-radius:7px;padding:12px 14px;display:flex;gap:13px;align-items:baseline}
+  .m .nm{font-family:"Cormorant Garamond",serif;font-size:19px;color:var(--adv);flex:0 0 162px}
+  .m .ds{font-size:13.5px;color:var(--parch-dim)} .m .ds b{color:var(--parch)}
+  .m .rb{font-family:"IBM Plex Mono",monospace;font-size:9.5px;color:var(--gold-dim);display:block;margin-top:3px;letter-spacing:.04em}
+
+  .attr{background:rgba(178,74,120,.06);border:1px solid rgba(178,74,120,.25);border-radius:8px;padding:15px 16px;
+    margin-top:6px;font-size:14.5px;color:var(--parch-dim)}
+  .attr b{color:var(--murex)} .attr .v{color:var(--verd)} .attr .a{color:var(--adv)}
+
+  .note{margin-top:26px;border-top:1px solid var(--line);padding-top:15px;font-family:"IBM Plex Mono",monospace;
+    font-size:11px;line-height:1.85;color:var(--lead-dim)}
+  .note b{color:var(--gold-dim);font-weight:500}
+  .foot{display:flex;justify-content:space-between;margin-top:24px;font-family:"IBM Plex Mono",monospace;
+    font-size:10.5px;color:var(--lead-dim);letter-spacing:.06em;flex-wrap:wrap;gap:6px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="eyebrow">audio cipher channels · paper V of VI</div>
+  <h1>Adversarial Audio<span class="gk">a message only a machine hears</span></h1>
+  <p class="sub">Every other channel in this set hid from <b>ears</b>. This one hides from <b>you specifically</b> — exploiting the gap between your perceptual processing and a machine's. One waveform passes your ear as silence or music. The same waveform arrives at a voice model as a command. The two hearings diverge at the seam between what your auditory cortex does and what <b>the decoder does</b>. Audit the divergence — that's the job.</p>
+
+  <h2>the seam</h2>
+  <p class="body" style="margin-top:0">Human perception is tuned by millions of years of evolution to ignore certain signals — ultrasonics above ~18 kHz, frequencies masked by louder neighbours, slight pitch distortions we interpolate past. Machine perception has different blindspots and different sharpnesses. The adversarial-audio attack is simply a waveform engineered to fall <span class="adv">on your blindspot but not the model's</span>. That's a different threat from steganography (which also hides a signal): steganography assumes the same listener for the cover signal and the hidden one; adversarial audio assumes <i>different</i> listeners with different sensory profiles.</p>
+
+  <h2>① the lineage</h2>
+  <figure>
+    <svg class="frame" viewBox="0 0 660 210" role="img" aria-label="Timeline of adversarial audio attacks">
+      <text x="24" y="30" fill="#a87f33" font-family="IBM Plex Mono,monospace" font-size="10" letter-spacing="1.5">THE PERCEPTION-GAP LINE — engineering for the machine's ear, not yours</text>
+      <line x1="56" y1="100" x2="612" y2="100" stroke="#9a98a6" stroke-width="1.3"/>
+      <g font-family="IBM Plex Mono,monospace">
+        <circle cx="78" cy="100" r="5.5" fill="#b070c8"/>
+        <text x="78" y="80" text-anchor="middle" fill="#e9e2d2" font-size="9.5">SZEGEDY+</text>
+        <text x="78" y="90" text-anchor="middle" fill="#e9e2d2" font-size="9.5">GOODFELLOW</text>
+        <text x="78" y="120" text-anchor="middle" fill="#8b8a96" font-size="9">2013–14</text>
+        <text x="78" y="133" text-anchor="middle" fill="#73b3a3" font-family="Spectral,serif" font-style="italic" font-size="9.5">adversarial images</text>
+
+        <circle cx="215" cy="100" r="5.5" fill="#b070c8"/>
+        <text x="215" y="80" text-anchor="middle" fill="#e9e2d2" font-size="9.5">HIDDEN VOICE</text>
+        <text x="215" y="90" text-anchor="middle" fill="#e9e2d2" font-size="9.5">COMMANDS</text>
+        <text x="215" y="120" text-anchor="middle" fill="#8b8a96" font-size="9">2016</text>
+        <text x="215" y="133" text-anchor="middle" fill="#73b3a3" font-family="Spectral,serif" font-style="italic" font-size="9.5">mangled audio, ASR obeys</text>
+
+        <circle cx="354" cy="100" r="5.5" fill="#b070c8"/>
+        <text x="354" y="80" text-anchor="middle" fill="#e9e2d2" font-size="9.5">DOLPHIN</text>
+        <text x="354" y="90" text-anchor="middle" fill="#e9e2d2" font-size="9.5">ATTACK</text>
+        <text x="354" y="120" text-anchor="middle" fill="#8b8a96" font-size="9">2017</text>
+        <text x="354" y="133" text-anchor="middle" fill="#73b3a3" font-family="Spectral,serif" font-style="italic" font-size="9.5">mic nonlinearity</text>
+
+        <circle cx="490" cy="100" r="5.5" fill="#b070c8"/>
+        <text x="490" y="80" text-anchor="middle" fill="#e9e2d2" font-size="9.5">CARLINI–WAGNER</text>
+        <text x="490" y="90" text-anchor="middle" fill="#e9e2d2" font-size="9.5">COMMANDERSONG</text>
+        <text x="490" y="120" text-anchor="middle" fill="#8b8a96" font-size="9">2018</text>
+        <text x="490" y="133" text-anchor="middle" fill="#73b3a3" font-family="Spectral,serif" font-style="italic" font-size="9.5">any transcript · in music</text>
+
+        <circle cx="606" cy="100" r="5.5" fill="#d9a441"/>
+        <text x="606" y="80" text-anchor="middle" fill="#e9e2d2" font-size="9.5">PSYCHO</text>
+        <text x="606" y="90" text-anchor="middle" fill="#e9e2d2" font-size="9.5">ACOUSTIC</text>
+        <text x="606" y="120" text-anchor="middle" fill="#8b8a96" font-size="9">2019+</text>
+        <text x="606" y="133" text-anchor="middle" fill="#73b3a3" font-family="Spectral,serif" font-style="italic" font-size="9.5">masked perturbation</text>
+      </g>
+      <text x="56" y="172" fill="#b9b2a3" font-family="Spectral,serif" font-style="italic" font-size="12.5">Adversarial examples were born in vision. Audio inherited the same trick — a tiny shift</text>
+      <text x="56" y="190" fill="#b9b2a3" font-family="Spectral,serif" font-style="italic" font-size="12.5">the ear forgives that a model cannot — then <tspan fill="#b070c8">weaponised as a channel the ear cannot detect.</tspan></text>
+    </svg>
+    <figcaption><b>note.</b> DolphinAttack (Zhang et al., CCS 2017, Best Paper) attacked Siri / Google Now / Alexa / Cortana / S Voice — successfully at up to ~175 cm. Carlini–Wagner (2018) showed any target transcript can be forced onto any audio waveform via gradient descent and CTC loss.</figcaption>
+  </figure>
+
+  <h2>② one waveform, two hearings</h2>
+  <p class="body" style="margin-top:0">Choose a command below. <span class="adv">Play carrier</span> emits it AM-modulated onto a ~20 kHz tone — barely audible, if at all. Then <span class="adv">machine decode</span> simulates the microphone's own nonlinearity: squaring the signal and low-passing the result demodulates the carrier and recovers the command, exactly as a mic does in hardware.</p>
+  <div class="demo">
+    <h4>select a command</h4>
+    <div class="presets" id="presets"></div>
+    <div class="bits" id="bits"></div>
+    <figure style="margin:0 0 12px">
+      <svg class="frame" viewBox="0 0 620 164" id="twoears" role="img" aria-label="Two-panel spectrum: carrier vs recovered baseband"></svg>
+    </figure>
+    <div class="row">
+      <button id="play">▶ play carrier (what you hear)</button>
+      <button class="primary" id="decode">⌕ machine decode</button>
+    </div>
+    <div class="verdict" id="verdict">choose a command — the carrier sounds like a faint high-pitched whine, if anything</div>
+  </div>
+
+  <h2>③ the four techniques</h2>
+  <div class="methods">
+    <div class="m">
+      <span class="nm">DolphinAttack</span>
+      <span class="ds">AM-modulate a voice command onto an ultrasonic carrier (&gt;20 kHz). The <b>microphone's own nonlinearity</b> demodulates it back to baseband — the model hears a command, the ear hears nothing. Siri, Alexa, Cortana all obeyed at &lt;175 cm.
+        <span class="rb">mechanism · AM + mic hardware nonlinearity</span>
+      </span>
+    </div>
+    <div class="m">
+      <span class="nm">hidden voice commands</span>
+      <span class="ds">Mangle or obfuscate audio until it is <b>incomprehensible to humans</b> but still decoded correctly by the ASR model. Audible but semantically invisible — the ear hears noise; the model hears "call 911."
+        <span class="rb">mechanism · deliberate mangling / noise masking</span>
+      </span>
+    </div>
+    <div class="m">
+      <span class="nm">Carlini–Wagner</span>
+      <span class="ds">Given <i>any</i> input waveform, add a <b>tiny perturbation via gradient descent</b> (CTC loss on DeepSpeech) so the model transcribes a chosen phrase — while a human hears the original audio. ~99.9% audio similarity; ~100% attack success.
+        <span class="rb">mechanism · white-box gradient / CTC optimization</span>
+      </span>
+    </div>
+    <div class="m">
+      <span class="nm">CommanderSong + psychoacoustic</span>
+      <span class="ds">Embed commands inside <b>real music</b> (CommanderSong), or hide perturbations <b>below the psychoacoustic masking threshold</b> — invisible to the ear and spectral analysis, but read by the model. MP3-style masking as cover.
+        <span class="rb">mechanism · music camouflage / perceptual masking</span>
+      </span>
+    </div>
+  </div>
+
+  <h2>④ the seam is your audit surface</h2>
+  <div class="attr">
+    The previous papers in this set attacked <i>infrastructure</i> — networks, air gaps, keys at rest. This one attacks <b>intent</b>. When a model "hears" a command that a human did not say, the provenance of the action breaks: there is no longer a reliable record of what was authorised. That is the attribution wound. For a <span class="v">voice-signed document</span> or a <span class="v">voice-authenticated action</span>, adversarial audio forges the author without touching the signature scheme — the key is used correctly, on a waveform the key-holder never produced. The defences run at the <a class="a">model boundary</a>: low-pass the mic input above hearing, liveness and voice-print authentication, adversarial training on known attack families, multimodal confirmation for sensitive actions, and anomaly detection on the divergence between what you hear and what the model reports hearing. <b>Auditing that divergence directly — watching where human and machine perception disagree — is exactly the empirical characterisation job.</b>
+  </div>
+
+  <div class="note">
+    <b>what's authentic.</b> the AM + mic nonlinearity mechanism (DolphinAttack, CCS 2017), the target-any-transcript result (Carlini–Wagner 2018), and the psychoacoustic hiding methods (Schönherr et al. 2018–19, Qin et al. ICML 2019) are real and sourced. the demo computes real quadratic nonlinearity + IIR low-pass filtering and decodes the recovered baseband by Goertzel analysis — verified, not faked.
+    <br><b>honest frame.</b> FC=20 kHz is a browser stand-in: real DolphinAttack uses 24–39 kHz and needs a dedicated ultrasonic transducer; the browser's Nyquist caps synthesis near 22 kHz. the "command" is an 8-bit FSK token, not actual speech — there is no ASR model here, just the carrier-recovery math. the perturbation branch (Carlini–Wagner) is described but not demoed; it needs a live ASR model and an optimisation loop. what the demo <i>does</i> show — that AM + nonlinearity recovers a signal a human cannot hear — is the exact physical core of the attack.
+  </div>
+
+  <div class="foot">
+    <span>PAPER V · ADVERSARIAL AUDIO — a message only a machine hears</span>
+    <span>next ▸ VI · NUMBERS STATIONS — the last cipher</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ── parameters ──────────────────────────────────────────────────────────
+  const F0=600, F1=950;        // baseband FSK (Hz)
+  const FC=20000;               // AM carrier stand-in (~24-39kHz in real attack)
+  const M=0.9;                  // AM modulation depth
+  const ALPHA=0.6;              // nonlinearity coefficient (α·x²)
+  const SEGDUR=0.11;            // s per bit
+
+  // ── command presets ──────────────────────────────────────────────────────
+  const CMDS=[
+    {label:'open lock',    bits:[0,0,0,1,0,1,1,0]},
+    {label:'call home',    bits:[0,1,0,0,1,1,0,1]},
+    {label:'disable alarm',bits:[1,1,0,1,0,1,0,0]},
+    {label:'navigate home',bits:[0,1,1,1,0,0,1,1]},
+  ];
+  let BITS=[...CMDS[0].bits], activeCmd=0;
+
+  // ── DSP ──────────────────────────────────────────────────────────────────
+  function buildAM(bits, sr){
+    const seg=Math.floor(SEGDUR*sr), n=seg*bits.length, am=new Float32Array(n);
+    bits.forEach((bit,k)=>{
+      const fb=bit?F1:F0, st=k*seg;
+      for(let i=0;i<seg;i++){
+        const r=i/seg;
+        let env=1; if(r<0.08)env=r/0.08; else if(r>0.92)env=(1-r)/0.08;
+        const baseband=env*Math.cos(2*Math.PI*fb*i/sr);
+        am[st+i]=Math.cos(2*Math.PI*FC*i/sr)*(1+M*baseband);
+      }
+    });
+    let mx=0; for(let i=0;i<n;i++)mx=Math.max(mx,Math.abs(am[i]));
+    if(mx)for(let i=0;i<n;i++)am[i]/=mx;
+    return {am,seg};
+  }
+
+  function lpf(buf,cutoff,sr){
+    const a=Math.exp(-2*Math.PI*cutoff/sr), out=new Float32Array(buf.length); let y=0;
+    for(let i=0;i<buf.length;i++){y=a*y+(1-a)*buf[i];out[i]=y;}
+    return out;
+  }
+
+  function demodulate(am,sr){
+    // quadratic nonlinearity: y = am + α·am²
+    const y=new Float32Array(am.length);
+    for(let i=0;i<am.length;i++)y[i]=am[i]+ALPHA*am[i]*am[i];
+    // 3-cascade IIR LPF: passes F0/F1 (600/950 Hz), kills carrier residual
+    let lp=lpf(y,1400,sr); lp=lpf(lp,1400,sr); lp=lpf(lp,1400,sr);
+    return lp;
+  }
+
+  function goertzel(buf,start,len,f,sr){
+    const w=2*Math.PI*f/sr,c=2*Math.cos(w); let s1=0,s2=0;
+    for(let i=0;i<len;i++){const s0=buf[start+i]+c*s1-s2;s2=s1;s1=s0;}
+    return s1*s1+s2*s2-c*s1*s2;
+  }
+
+  function decodeBits(demod,nbits,seg,sr){
+    return Array.from({length:nbits},(_,k)=>{
+      const st=k*seg;
+      return goertzel(demod,st,seg,F1,sr)>goertzel(demod,st,seg,F0,sr)?1:0;
+    });
+  }
+
+  // ── audio context ────────────────────────────────────────────────────────
+  let ctx=null;
+  function getCtx(){if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume();return ctx;}
+
+  function playBuf(buf,gain=0.5){
+    const c=getCtx(), b=c.createBuffer(1,buf.length,c.sampleRate);
+    (b.copyToChannel?b.copyToChannel(Float32Array.from(buf),0):b.getChannelData(0).set(buf));
+    const s=c.createBufferSource(), g=c.createGain(); g.gain.value=gain;
+    s.connect(g).connect(c.destination); s.start();
+  }
+
+  // ── spectrum SVG ─────────────────────────────────────────────────────────
+  const NS='http://www.w3.org/2000/svg';
+  function el(tag,attrs,parent){
+    const e=document.createElementNS(NS,tag);
+    for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);
+    if(parent)parent.appendChild(e);
+    return e;
+  }
+  function txt(x,y,s,attrs,parent){
+    const t=el('text',{x,y,...attrs},parent); t.textContent=s; return t;
+  }
+
+  // p0Rel, p1Rel: 0-1 relative Goertzel power for right panel (null = not decoded yet)
+  function drawTwoEars(p0Rel,p1Rel){
+    const svg=document.getElementById('twoears'); svg.innerHTML='';
+    const W=620, H=164;
+    // left panel: x 18..290, right panel: x 330..600
+    const Lx1=18,Lx2=288, Rx1=332,Rx2=600;
+    const yBase=136, yTop=24;
+
+    // left panel heading
+    txt(Lx1,18,'YOU HEAR',{'fill':'#5b5868','font-family':'IBM Plex Mono,monospace','font-size':'9','letter-spacing':'1.5'},svg);
+    // right panel heading
+    txt(Rx1,18,'MACHINE HEARS',{'fill':p0Rel!==null?'#b070c8':'#5b5868','font-family':'IBM Plex Mono,monospace','font-size':'9','letter-spacing':'1.5'},svg);
+
+    // left axis
+    el('line',{x1:Lx1,x2:Lx2,y1:yBase,y2:yBase,stroke:'#5b5868','stroke-width':'1'},svg);
+    // left axis ticks: 17kHz, 19kHz, 20kHz, 21kHz
+    const lxf=f=>Lx1+(f-16000)/(23000-16000)*(Lx2-Lx1);
+    [17,18,19,20,21,22].forEach(k=>{
+      const x=lxf(k*1000);
+      el('line',{x1:x,x2:x,y1:yBase,y2:yBase+4,stroke:'#5b5868','stroke-width':'1'},svg);
+      txt(x,yBase+13,k+'k',{'fill':'#5b5868','font-family':'IBM Plex Mono,monospace','font-size':'7.5','text-anchor':'middle'},svg);
+    });
+    // hearing-ceiling marker at 20kHz
+    const xCeil=lxf(20000);
+    el('line',{x1:xCeil,x2:xCeil,y1:yTop+4,y2:yBase,stroke:'rgba(178,74,120,.5)','stroke-width':'1','stroke-dasharray':'3 3'},svg);
+    txt(xCeil+3,yTop+14,'hearing ceiling',{'fill':'#b24a78','font-family':'IBM Plex Mono,monospace','font-size':'7.5'},svg);
+
+    // carrier bar at FC=20000
+    const xFC=lxf(FC);
+    el('line',{x1:xFC,x2:xFC,y1:yBase-0.82*(yBase-yTop),y2:yBase,stroke:'#6a6a7a','stroke-width':'5'},svg);
+    txt(xFC,yBase-0.82*(yBase-yTop)-5,'20kHz',{'fill':'#6a6a7a','font-family':'IBM Plex Mono,monospace','font-size':'8','text-anchor':'middle'},svg);
+
+    // sideband bars
+    [FC-F0,FC+F0,FC-F1,FC+F1].forEach(f=>{
+      const x=lxf(f); if(x<Lx1||x>Lx2)return;
+      el('line',{x1:x,x2:x,y1:yBase-0.16*(yBase-yTop),y2:yBase,stroke:'#4a4a5a','stroke-width':'3'},svg);
+    });
+
+    // separator arrow
+    txt(298,82,'mic',{'fill':'#5b5868','font-family':'IBM Plex Mono,monospace','font-size':'8.5','text-anchor':'middle'},svg);
+    txt(298,94,'↓',{'fill':'#5b5868','font-family':'IBM Plex Mono,monospace','font-size':'11','text-anchor':'middle'},svg);
+    txt(298,106,'non-',{'fill':'#5b5868','font-family':'IBM Plex Mono,monospace','font-size':'8.5','text-anchor':'middle'},svg);
+    txt(298,118,'linearity',{'fill':'#5b5868','font-family':'IBM Plex Mono,monospace','font-size':'8.5','text-anchor':'middle'},svg);
+
+    // right axis
+    el('line',{x1:Rx1,x2:Rx2,y1:yBase,y2:yBase,stroke:'#5b5868','stroke-width':'1'},svg);
+    const rxf=f=>Rx1+(f-300)/(1200-300)*(Rx2-Rx1);
+    [400,600,800,950,1100].forEach(f=>{
+      const x=rxf(f);
+      el('line',{x1:x,x2:x,y1:yBase,y2:yBase+4,stroke:'#5b5868','stroke-width':'1'},svg);
+      txt(x,yBase+13,f+'Hz',{'fill':'#5b5868','font-family':'IBM Plex Mono,monospace','font-size':'7.5','text-anchor':'middle'},svg);
+    });
+
+    if(p0Rel!==null){
+      // F0 bar
+      const xF0=rxf(F0), h0=(yBase-yTop)*Math.min(1,p0Rel)*0.92;
+      const win=p1Rel>=p0Rel;
+      el('line',{x1:xF0,x2:xF0,y1:yBase-h0,y2:yBase,stroke:win?'#3a2e48':'#b070c8','stroke-width':'6'},svg);
+      txt(xF0,yBase-h0-5,F0+'Hz\nbit 0',{'fill':win?'#5b5868':'#b070c8','font-family':'IBM Plex Mono,monospace','font-size':'8','text-anchor':'middle'},svg);
+      // F1 bar
+      const xF1=rxf(F1), h1=(yBase-yTop)*Math.min(1,p1Rel)*0.92;
+      el('line',{x1:xF1,x2:xF1,y1:yBase-h1,y2:yBase,stroke:win?'#b070c8':'#3a2e48','stroke-width':'6'},svg);
+      txt(xF1,yBase-h1-5,F1+'Hz\nbit 1',{'fill':win?'#b070c8':'#5b5868','font-family':'IBM Plex Mono,monospace','font-size':'8','text-anchor':'middle'},svg);
+    } else {
+      // dim placeholder bars
+      [[F0,0.22],[F1,0.15]].forEach(([f,h])=>{
+        const x=rxf(f);
+        el('line',{x1:x,x2:x,y1:yBase-(yBase-yTop)*h,y2:yBase,stroke:'#2a2838','stroke-width':'6'},svg);
+      });
+      txt((Rx1+Rx2)/2,80,'run machine decode',{'fill':'#3a3848','font-family':'IBM Plex Mono,monospace','font-size':'9','text-anchor':'middle'},svg);
+    }
+  }
+  drawTwoEars(null,null);
+
+  // ── bit & preset UI ──────────────────────────────────────────────────────
+  const bitsEl=document.getElementById('bits');
+  const presetsEl=document.getElementById('presets');
+
+  function renderBits(){
+    bitsEl.innerHTML='';
+    BITS.forEach((bit,i)=>{
+      const d=document.createElement('div');
+      d.className='bit'+(bit?' one':'');
+      d.innerHTML=`<b>${bit}</b><small>${bit?F1+'Hz':F0+'Hz'}</small>`;
+      d.addEventListener('click',()=>{BITS[i]=bit?0:1;activeCmd=-1;renderPresets();renderBits();drawTwoEars(null,null);
+        document.getElementById('verdict').textContent='bits changed — play carrier then decode';});
+      bitsEl.appendChild(d);
+    });
+  }
+
+  function renderPresets(){
+    presetsEl.querySelectorAll('.preset').forEach((b,i)=>b.classList.toggle('active',i===activeCmd));
+  }
+
+  CMDS.forEach((cmd,i)=>{
+    const b=document.createElement('button');
+    b.className='preset'+(i===0?' active':'');
+    b.textContent=cmd.label;
+    b.addEventListener('click',()=>{
+      BITS=[...cmd.bits]; activeCmd=i; renderBits(); renderPresets(); drawTwoEars(null,null);
+      document.getElementById('verdict').textContent=`"${cmd.label}" loaded — play the carrier`;
+    });
+    presetsEl.appendChild(b);
+  });
+
+  renderBits();
+
+  // ── buttons ──────────────────────────────────────────────────────────────
+  document.getElementById('play').addEventListener('click',()=>{
+    const c=getCtx(); const {am}=buildAM(BITS,c.sampleRate);
+    playBuf(am,0.65);
+    document.getElementById('verdict').textContent='▶ carrier playing — this is what you (probably) hear: a faint 20 kHz whine';
+  });
+
+  document.getElementById('decode').addEventListener('click',()=>{
+    const c=getCtx(), sr=c.sampleRate;
+    const {am,seg}=buildAM(BITS,sr);
+    const demod=demodulate(am,sr);
+    const rec=decodeBits(demod,BITS.length,seg,sr);
+
+    // measure goertzel on middle segment for spectrum display
+    const midSeg=Math.floor(BITS.length/2); const st=midSeg*seg;
+    const p0=goertzel(demod,st,seg,F0,sr), p1=goertzel(demod,st,seg,F1,sr);
+    const mx=Math.max(p0,p1)||1;
+    drawTwoEars(p0/mx,p1/mx);
+
+    const ok=rec.join('')===BITS.join('');
+    const cmdMatch=CMDS.find(c=>c.bits.join('')===rec.join(''));
+    const cmdLabel=cmdMatch?`"${cmdMatch.label}"`:`0x${parseInt(rec.join(''),2).toString(16).toUpperCase().padStart(2,'0')}`;
+
+    document.getElementById('verdict').innerHTML=
+      `carrier sent&nbsp; <b>${BITS.join(' ')}</b><br>`+
+      `machine read&nbsp; <b>${rec.join(' ')}</b> &nbsp;`+
+      (ok?`<span class="ok">✓ command decoded: ${cmdLabel}</span>`:`<span class="x">✗ error</span>`);
+  });
+
+  // ── expose for testing ────────────────────────────────────────────────────
+  window.__adv={buildAM,demodulate,decodeBits,goertzel};
+})();
+</script>
+</body>
+</html>
